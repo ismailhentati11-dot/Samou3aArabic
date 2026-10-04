@@ -1,0 +1,132 @@
+[
+    {
+        "url": "https://raw.githubusercontent.com/ismailhentati11-dot/Samou3aArabic/builds/Akwam.cs3",
+        "status": 1,
+        "version": 3,
+        "name": "Akwam",
+        "internalName": "Akwam",
+        "authors": [
+            "Abodabodd"
+        ],
+        "description": "",
+        "fileSize": 27942,
+        "repositoryUrl": "https://github.com/ismailhentati11-dot/Samou3aArabic",
+        "language": "ar",
+        "tvTypes": [
+            "TvSeries",
+            "Movie"
+        ],
+        "iconUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2vuGLv4zY3XpoN2jza2unCQ95xFfypfe-h3k3xteMbGxl7taw-ziXyNg&s=10",
+        "apiVersion": 1,
+        "fileHash": "sha256-566b9cd5b86dad2fb6a4a628496b827d2742d06b015255481139505ef0bb8147"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/ismailhentati11-dot/Samou3aArabic/builds/Egydead.cs3",
+        "status": 1,
+        "version": 1,
+        "name": "Egydead",
+        "internalName": "Egydead",
+        "authors": [
+            "Abodabodd"
+        ],
+        "description": "",
+        "fileSize": 53726,
+        "repositoryUrl": "https://github.com/ismailhentati11-dot/Samou3aArabic",
+        "language": "ar",
+        "tvTypes": [
+            "Movie",
+            "TvSeries",
+            "Anime",
+            "AsianDrama"
+        ],
+        "iconUrl": "https://yt3.googleusercontent.com/ytc/AIdro_kgVTM6DJtx3tcS4gkPOOPnwFXKNhsrFyMRigWOlWomuQ=s900-c-k-c0x00ffffff-no-rj",
+        "apiVersion": 1,
+        "fileHash": "sha256-837684d369f62ef16deda7e23eb460eac3aae6b8f14183aef700bd203e9ccb3d"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/ismailhentati11-dot/Samou3aArabic/builds/Krmzy.cs3",
+        "status": 1,
+        "version": 1,
+        "name": "Krmzy",
+        "internalName": "Krmzy",
+        "authors": [
+            "Abodabodd"
+        ],
+        "description": "البحث لا يعمل حاليا مشكلة من الموقع",
+        "fileSize": 29631,
+        "repositoryUrl": "https://github.com/ismailhentati11-dot/Samou3aArabic",
+        "language": "ar",
+        "tvTypes": [
+            "TvSeries",
+            "Movie"
+        ],
+        "iconUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRwTnAJOvyri3uHzHxjkEdlaBBKs8MAvIuJtFmCoo9u5qYiuFpHZjcl6tDi&s=10",
+        "apiVersion": 1,
+        "fileHash": "sha256-785b7fc9326398763dd7343b90658e28b5aae1f7ce3fa1de72fc09a67e6b99e6"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/ismailhentati11-dot/Samou3aArabic/builds/MyCimaProvider.cs3",
+        "status": 1,
+        "version": 1,
+        "name": "MyCimaProvider",
+        "internalName": "MyCimaProvider",
+        "authors": [
+            "Abodabodd"
+        ],
+        "description": "",
+        "fileSize": 45475,
+        "repositoryUrl": "https://github.com/ismailhentati11-dot/Samou3aArabic",
+        "language": "ar",
+        "tvTypes": [
+            "Movie",
+            "TvSeries",
+            "Anime",
+            "AsianDrama"
+        ],
+        "iconUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTxoF3lscri32oVf0iQlhbjFEoUn2xg3OmQIx4wYdDmqw&s",
+        "apiVersion": 1,
+        "fileHash": "sha256-ff8e09bb07cb94fad7216e8c6a29bdff3d5758e6f7f1c4b68bacad18935bfe5a"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/ismailhentati11-dot/Samou3aArabic/builds/Topcinema.cs3",
+        "status": 1,
+        "version": 1,
+        "name": "Topcinema",
+        "internalName": "Topcinema",
+        "authors": [
+            "Abodabodd"
+        ],
+        "description": "",
+        "fileSize": 28702,
+        "repositoryUrl": "https://github.com/ismailhentati11-dot/Samou3aArabic",
+        "language": "ar",
+        "tvTypes": [
+            "Movie",
+            "tvTypes"
+        ],
+        "iconUrl": "https://web8.topcinema.cam/wp-content/uploads/2023/05/cropped-icon-32x32.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-04fe8195714a8ef8c38545ad8c135b219dfa2b1e2728ba70da82aa509964f69c"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/ismailhentati11-dot/Samou3aArabic/builds/TukTukcima.cs3",
+        "status": 1,
+        "version": 1,
+        "name": "TukTukcima",
+        "internalName": "TukTukcima",
+        "authors": [
+            "Abodabodd"
+        ],
+        "description": "",
+        "fileSize": 40543,
+        "repositoryUrl": "https://github.com/ismailhentati11-dot/Samou3aArabic",
+        "language": "ar",
+        "tvTypes": [
+            "TvSeries",
+            "Movie"
+        ],
+        "iconUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ10TEG3tTtkEF9_g3IslEP3xs0wx9EVhBs7b_H5M1gpg&s=10",
+        "apiVersion": 1,
+        "fileHash": "sha256-edeb34935d96d9a1bcba94dd83a8624bba6692999830650751cfb43d8f3b424b"
+    }
+]
