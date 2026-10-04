@@ -1,7 +1,7 @@
-{
-  "name": "3rabi عربي",
-  "description": "مشاهدة الافلام والمسلسلات تجربة خالية من الاعلانات",
-  "iconUrl": "https://raw.githubusercontent.com/Abodabodd/re-3arabi/refs/heads/main/icon.png",
+﻿{
+  "name": "3rabi Samou3a",
+  "description": "Extensions arabes CloudStream",
+  "iconUrl": "https://raw.githubusercontent.com/ismailhentati11-dot/Samou3aArabic/refs/heads/main/icon.png",
   "manifestVersion": 1,
-  "pluginLists": ["https://raw.githubusercontent.com/Abodabodd/re-3arabi/refs/heads/builds/plugins.json"]
+  "pluginLists": ["https://raw.githubusercontent.com/ismailhentati11-dot/Samou3aArabic/refs/heads/builds/plugins.json"]
 }

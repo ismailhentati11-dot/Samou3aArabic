@@ -14,7 +14,7 @@ import java.net.URI
 import java.net.URLEncoder
 
 class Shahid4u : MainAPI() {
-    override var mainUrl = "https://shahed4u.im/"
+    override var mainUrl = "https://shaahiied4u.net/"
     override var name = "Shahid4u"
     override val hasMainPage = true
     override var lang = "ar"
@@ -332,14 +332,11 @@ class Shahid4u : MainAPI() {
             "Upgrade-Insecure-Requests" to "1"
         )
         try {
-            val watchResponse = app.get(
-                watchUrl,
-                headers = browserHeaders,
-                interceptor = cfInterceptor
-            )
-            val htmlContent = watchResponse.text
+            // on passe par httpGet qui gere Cloudflare et les cookies comme le reste du site
+            val watchDoc = httpGet(watchUrl, referer = data)
+            val htmlContent = watchDoc.outerHtml()
             embedUrls.addAll(parseEmbedUrls(htmlContent))
-            watchResponse.document.select("iframe[src]").forEach { iframe ->
+            watchDoc.select("iframe[src]").forEach { iframe ->
                 val src = iframe.absUrl("src").ifBlank { iframe.attr("src") }
                 if (src.isNotBlank()) embedUrls.add(src)
             }
