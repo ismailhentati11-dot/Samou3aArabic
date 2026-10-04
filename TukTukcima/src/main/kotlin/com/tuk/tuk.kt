@@ -129,53 +129,55 @@ class TukTukHd : MainAPI() {
         val year = doc.select(".RightTaxContent a[href*='release-year']").text().filter { it.isDigit() }.toIntOrNull()
         val ratingText = doc.select(".imdbS strong").text()
         val scoreValue = ratingText.toDoubleOrNull()?.times(1000)?.toInt()
-        val isSeries = doc.select(".allepcont, .allseasonss").isNotEmpty()
+	val isSeries = doc.select(".episodes--list--side a, .allseasonss .Block--Item").isNotEmpty()
 
         if (isSeries) {
             val episodesList = ArrayList<Episode>()
+
+            // les saisons sont dans l'onglet المواسم
             val seasonElements = doc.select(".allseasonss .Block--Item a")
 
             if (seasonElements.isNotEmpty()) {
+                // on parcourt chaque saison
                 seasonElements.amap { seasonEl ->
                     val seasonUrl = fixUrl(seasonEl.attr("href"))
                     val seasonName = seasonEl.select("h3").text()
                     val seasonNum = seasonName.filter { it.isDigit() }.toIntOrNull() ?: 1
 
                     val seasonDoc = app.get(seasonUrl).document
-                    seasonDoc.select(".allepcont a").forEach { ep ->
-                        val epTitle = ep.select(".ep-info h2").text()
+
+                    // liste des épisodes de cette saison
+                    seasonDoc.select(".episodes--list--side a").forEach { ep ->
                         val epHref = fixUrl(ep.attr("href"))
-                        val epNum = ep.select(".epnum").text().filter { it.isDigit() }.toIntOrNull()
-                        val epThumb = ep.select("img").attr("data-src")
-                            .ifEmpty { ep.select("img").attr("src") }
+                        val epNum = ep.selectFirst("em")?.text()?.filter { it.isDigit() }?.toIntOrNull()
+                        val epTitle = ep.attr("title")
 
                         episodesList.add(
                             newEpisode(epHref) {
                                 this.name = epTitle
-                                episode = epNum
-                                season = seasonNum
-                                posterUrl = epThumb
+                                this.episode = epNum
+                                this.season = seasonNum
                             }
                         )
                     }
                 }
             } else {
-                doc.select(".allepcont a").forEach { ep ->
-                    val epTitle = ep.select(".ep-info h2").text()
+                // une seule saison : on lit directement la liste presente sur la page
+                doc.select(".episodes--list--side a").forEach { ep ->
                     val epHref = fixUrl(ep.attr("href"))
-                    val epNum = ep.select(".epnum").text().filter { it.isDigit() }.toIntOrNull()
-                    val epThumb = ep.select("img").attr("data-src").ifEmpty { ep.select("img").attr("src") }
+                    val epNum = ep.selectFirst("em")?.text()?.filter { it.isDigit() }?.toIntOrNull()
+                    val epTitle = ep.attr("title")
 
                     episodesList.add(
                         newEpisode(epHref) {
                             this.name = epTitle
                             this.episode = epNum
                             this.season = 1
-                            this.posterUrl = epThumb
                         }
                     )
                 }
             }
+
             val sortedEpisodes = episodesList.sortedWith(compareBy({ it.season }, { it.episode }))
 
             return newTvSeriesLoadResponse(cleanTitle, url, TvType.TvSeries, sortedEpisodes) {
