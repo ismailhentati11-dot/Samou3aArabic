@@ -129,50 +129,27 @@ class TukTukHd : MainAPI() {
         val year = doc.select(".RightTaxContent a[href*='release-year']").text().filter { it.isDigit() }.toIntOrNull()
         val ratingText = doc.select(".imdbS strong").text()
         val scoreValue = ratingText.toDoubleOrNull()?.times(1000)?.toInt()
-	val isSeries = doc.select(".episodes--list--side a, .allseasonss .Block--Item").isNotEmpty()
+	val isSeries = doc.select(".episodes--list--side a").isNotEmpty()
 
         if (isSeries) {
             val episodesList = ArrayList<Episode>()
-            val seasonElements = doc.select(".allseasonss .Block--Item a")
 
-               if (seasonElements.size > 1) {
-                seasonElements.amap { seasonEl ->
-                    val seasonUrl = fixUrl(seasonEl.attr("href"))
-                    val seasonName = seasonEl.select("h3").text()
-                    val seasonNum = seasonName.filter { it.isDigit() }.toIntOrNull() ?: 1
+            // on lit directement la liste des episodes presente sur la page (fiable, pas de 404)
+            doc.select(".episodes--list--side a").forEach { ep ->
+                val epHref = fixUrl(ep.attr("href"))
+                val epNum = ep.selectFirst("em")?.text()?.filter { it.isDigit() }?.toIntOrNull()
+                val epTitle = ep.attr("title")
 
-                    val seasonDoc = app.get(seasonUrl).document
-                    seasonDoc.select(".episodes--list--side a").forEach { ep ->
-                        val epHref = fixUrl(ep.attr("href"))
-                        val epNum = ep.selectFirst("em")?.text()?.filter { it.isDigit() }?.toIntOrNull()
-                        val epTitle = ep.attr("title")
-
-                        episodesList.add(
-                            newEpisode(epHref) {
-                                this.name = epTitle
-                                this.episode = epNum
-                                this.season = seasonNum
-                            }
-                        )
+                episodesList.add(
+                    newEpisode(epHref) {
+                        this.name = epTitle
+                        this.episode = epNum
+                        this.season = 1
                     }
-                }
-            } else {
-                doc.select(".episodes--list--side a").forEach { ep ->
-                    val epHref = fixUrl(ep.attr("href"))
-                    val epNum = ep.selectFirst("em")?.text()?.filter { it.isDigit() }?.toIntOrNull()
-                    val epTitle = ep.attr("title")
-
-                    episodesList.add(
-                        newEpisode(epHref) {
-                            this.name = epTitle
-                            this.episode = epNum
-                            this.season = 1
-                        }
-                    )
-                }
+                )
             }
 
-            val sortedEpisodes = episodesList.sortedWith(compareBy({ it.season }, { it.episode }))
+            val sortedEpisodes = episodesList.sortedWith(compareBy({ it.episode }))
 
             return newTvSeriesLoadResponse(cleanTitle, url, TvType.TvSeries, sortedEpisodes) {
                 this.posterUrl = poster
