@@ -387,7 +387,6 @@ class Akwam : MainAPI() {
             for (srcEl in sourceElements) {
                 val rawVideoUrl = srcEl.attr("abs:src").ifBlank { srcEl.attr("src") }.trim()
                 val videoUrl = rawVideoUrl.replace(" ", "%20")
-                    .replace("https://", "http://")
 
                 if (videoUrl.isBlank()) continue
                 if (!seen.add(videoUrl)) continue
