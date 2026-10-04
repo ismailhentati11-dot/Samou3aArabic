@@ -332,7 +332,6 @@ class Shahid4u : MainAPI() {
             "Upgrade-Insecure-Requests" to "1"
         )
         try {
-            // on passe par httpGet qui gere Cloudflare et les cookies comme le reste du site
             val watchDoc = httpGet(watchUrl, referer = data)
             val htmlContent = watchDoc.outerHtml()
             embedUrls.addAll(parseEmbedUrls(htmlContent))
