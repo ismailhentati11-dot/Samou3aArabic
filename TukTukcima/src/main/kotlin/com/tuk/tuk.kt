@@ -129,27 +129,69 @@ class TukTukHd : MainAPI() {
         val year = doc.select(".RightTaxContent a[href*='release-year']").text().filter { it.isDigit() }.toIntOrNull()
         val ratingText = doc.select(".imdbS strong").text()
         val scoreValue = ratingText.toDoubleOrNull()?.times(1000)?.toInt()
-	val isSeries = doc.select(".episodes--list--side a").isNotEmpty()
+	val isSeries = doc.select(".episodes--list--side a").isNotEmpty() || doc.select(".allseasonss .Block--Item a").isNotEmpty()	
 
-        if (isSeries) {
+	if (isSeries) {
             val episodesList = ArrayList<Episode>()
+            val seasonElements = doc.select(".allseasonss .Block--Item a")
 
-            // on lit directement la liste des episodes presente sur la page (fiable, pas de 404)
-            doc.select(".episodes--list--side a").forEach { ep ->
-                val epHref = fixUrl(ep.attr("href"))
-                val epNum = ep.selectFirst("em")?.text()?.filter { it.isDigit() }?.toIntOrNull()
-                val epTitle = ep.attr("title")
+            if (seasonElements.isNotEmpty()) {
+                seasonElements.amap { seasonEl ->
+                    val seasonUrl = fixUrl(seasonEl.attr("href"))
+                    val seasonName = seasonEl.select("h3").text()
+                    
+                    // Extraction du numéro de saison (chiffre ou mot clé en arabe)
+                    val seasonNum = seasonName.filter { it.isDigit() }.toIntOrNull()
+                        ?: when {
+                            seasonName.contains("الاول") || seasonName.contains("الأول") -> 1
+                            seasonName.contains("الثاني") -> 2
+                            seasonName.contains("الثالث") -> 3
+                            seasonName.contains("الرابع") -> 4
+                            seasonName.contains("الخامس") -> 5
+                            seasonName.contains("السادس") -> 6
+                            seasonName.contains("السابع") -> 7
+                            seasonName.contains("الثامن") -> 8
+                            seasonName.contains("التاسع") -> 9
+                            seasonName.contains("العاشر") -> 10
+                            else -> 1
+                        }
 
-                episodesList.add(
-                    newEpisode(epHref) {
-                        this.name = epTitle
-                        this.episode = epNum
-                        this.season = 1
+                    val seasonDoc = app.get(seasonUrl).document
+                    val seasonPoster = seasonDoc.selectFirst(".MainSingle .left .image img")?.attr("src") ?: poster
+
+                    seasonDoc.select(".episodes--list--side a").forEach { ep ->
+                        val epHref = fixUrl(ep.attr("href"))
+                        val epNum = ep.selectFirst("em")?.text()?.filter { it.isDigit() }?.toIntOrNull()
+                        val epTitle = ep.attr("title")
+
+                        episodesList.add(
+                            newEpisode(epHref) {
+                                this.name = epTitle
+                                this.episode = epNum
+                                this.season = seasonNum // <--- Assigne le numéro pour le menu déroulant
+                                this.posterUrl = seasonPoster
+                            }
+                        )
                     }
-                )
+                }
+            } else {
+                doc.select(".episodes--list--side a").forEach { ep ->
+                    val epHref = fixUrl(ep.attr("href"))
+                    val epNum = ep.selectFirst("em")?.text()?.filter { it.isDigit() }?.toIntOrNull()
+                    val epTitle = ep.attr("title")
+
+                    episodesList.add(
+                        newEpisode(epHref) {
+                            this.name = epTitle
+                            this.episode = epNum
+                            this.season = 1 // <--- Saison 1 par défaut s'il n'y a pas d'autres saisons
+                            this.posterUrl = poster
+                        }
+                    )
+                }
             }
 
-            val sortedEpisodes = episodesList.sortedWith(compareBy({ it.episode }))
+            val sortedEpisodes = episodesList.sortedWith(compareBy({ it.season }, { it.episode }))
 
             return newTvSeriesLoadResponse(cleanTitle, url, TvType.TvSeries, sortedEpisodes) {
                 this.posterUrl = poster
