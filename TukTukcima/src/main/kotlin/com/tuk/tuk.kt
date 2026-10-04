@@ -133,20 +133,15 @@ class TukTukHd : MainAPI() {
 
         if (isSeries) {
             val episodesList = ArrayList<Episode>()
-
-            // les saisons sont dans l'onglet المواسم
             val seasonElements = doc.select(".allseasonss .Block--Item a")
 
             if (seasonElements.isNotEmpty()) {
-                // on parcourt chaque saison
                 seasonElements.amap { seasonEl ->
                     val seasonUrl = fixUrl(seasonEl.attr("href"))
                     val seasonName = seasonEl.select("h3").text()
                     val seasonNum = seasonName.filter { it.isDigit() }.toIntOrNull() ?: 1
 
                     val seasonDoc = app.get(seasonUrl).document
-
-                    // liste des épisodes de cette saison
                     seasonDoc.select(".episodes--list--side a").forEach { ep ->
                         val epHref = fixUrl(ep.attr("href"))
                         val epNum = ep.selectFirst("em")?.text()?.filter { it.isDigit() }?.toIntOrNull()
@@ -162,7 +157,6 @@ class TukTukHd : MainAPI() {
                     }
                 }
             } else {
-                // une seule saison : on lit directement la liste presente sur la page
                 doc.select(".episodes--list--side a").forEach { ep ->
                     val epHref = fixUrl(ep.attr("href"))
                     val epNum = ep.selectFirst("em")?.text()?.filter { it.isDigit() }?.toIntOrNull()
