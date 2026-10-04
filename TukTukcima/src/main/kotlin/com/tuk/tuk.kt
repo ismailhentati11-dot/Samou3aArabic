@@ -135,7 +135,7 @@ class TukTukHd : MainAPI() {
             val episodesList = ArrayList<Episode>()
             val seasonElements = doc.select(".allseasonss .Block--Item a")
 
-            if (seasonElements.isNotEmpty()) {
+               if (seasonElements.size > 1) {
                 seasonElements.amap { seasonEl ->
                     val seasonUrl = fixUrl(seasonEl.attr("href"))
                     val seasonName = seasonEl.select("h3").text()
