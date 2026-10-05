@@ -133,8 +133,6 @@ class TukTukHd : MainAPI() {
 
         if (isSeries) {
             val episodesList = ArrayList<Episode>()
-
-            // on detecte le numero de saison depuis le titre de la page
             val seasonNum = when {
                 fullTitle.contains("الموسم الاول") || fullTitle.contains("الموسم الأول") -> 1
                 fullTitle.contains("الموسم الثاني") -> 2
@@ -144,8 +142,6 @@ class TukTukHd : MainAPI() {
                 fullTitle.contains("الموسم السادس") -> 6
                 else -> 1
             }
-
-            // on lit directement la liste des episodes presente sur la page (fiable)
             doc.select(".episodes--list--side a").forEach { ep ->
                 val epHref = fixUrl(ep.attr("href"))
                 val epNum = ep.selectFirst("em")?.text()?.filter { it.isDigit() }?.toIntOrNull()
