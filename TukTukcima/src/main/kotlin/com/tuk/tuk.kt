@@ -133,8 +133,6 @@ class TukTukHd : MainAPI() {
 
         if (isSeries) {
             val episodesList = ArrayList<Episode>()
-
-            // on lit directement la liste des episodes presente sur la page (fiable, pas de 404)
             doc.select(".episodes--list--side a").forEach { ep ->
                 val epHref = fixUrl(ep.attr("href"))
                 val epNum = ep.selectFirst("em")?.text()?.filter { it.isDigit() }?.toIntOrNull()
