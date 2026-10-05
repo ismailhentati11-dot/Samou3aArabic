@@ -34,6 +34,7 @@ class TukTukHd : MainAPI() {
         "$mainUrl/category/series-1/page/" to "أحدث الحلقات",
         "$mainUrl/category/movies-2/%d8%a7%d9%81%d9%84%d8%a7%d9%85-%d9%85%d8%af%d8%a8%d9%84%d8%ac%d8%a9/page/" to "أفلام مدبلجة"
     )
+
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = request.data + page
         val document = app.get(url).document
@@ -42,6 +43,7 @@ class TukTukHd : MainAPI() {
         }
         return newHomePageResponse(request.name, home)
     }
+
     private fun toSearchResult(element: Element): SearchResponse? {
         val linkTag = element.selectFirst("a") ?: return null
         val title = element.selectFirst(".title")?.text() ?: linkTag.attr("title")
@@ -62,12 +64,12 @@ class TukTukHd : MainAPI() {
             }
         }
     }
-        override suspend fun search(query: String): List<SearchResponse> {
-            return search(query, 1)?.items ?: emptyList()
-        }
+
+    override suspend fun search(query: String): List<SearchResponse> {
+        return search(query, 1)?.items ?: emptyList()
+    }
 
     override suspend fun search(query: String, page: Int): SearchResponseList? = coroutineScope {
-
         val encoded = URLEncoder.encode(query, "utf-8")
         val page1 = (page - 1) * 2 + 1
         val page2 = page1 + 1
@@ -90,12 +92,11 @@ class TukTukHd : MainAPI() {
 
         newSearchResponseList(cleaned, cleaned.isNotEmpty())
     }
-    private fun mergeSimilarResults(list: List<SearchResponse>): List<SearchResponse> {
 
+    private fun mergeSimilarResults(list: List<SearchResponse>): List<SearchResponse> {
         val grouped = mutableMapOf<String, SearchResponse>()
 
         for (item in list) {
-
             val title = item.name
             if (title.contains("فيلم", true) ||
                 title.contains("فلم", true) ||
@@ -124,24 +125,22 @@ class TukTukHd : MainAPI() {
 
         val desc = doc.select(".story p").text()
         val poster = doc.selectFirst(".MainSingle .left .image img")?.attr("src")
-        val bgPoster = doc.selectFirst(".homepage__bg")?.attr("style")?.substringAfter("url(")?.substringBefore(")") ?: poster
 
         val year = doc.select(".RightTaxContent a[href*='release-year']").text().filter { it.isDigit() }.toIntOrNull()
         val ratingText = doc.select(".imdbS strong").text()
         val scoreValue = ratingText.toDoubleOrNull()?.times(1000)?.toInt()
-	val isSeries = doc.select(".episodes--list--side a").isNotEmpty() || doc.select(".allseasonss .Block--Item a").isNotEmpty()	
+        val isSeries = doc.select(".episodes--list--side a").isNotEmpty() || doc.select(".allseasonss .Block--Item a").isNotEmpty()
 
-	if (isSeries) {
+        if (isSeries) {
             val episodesList = ArrayList<Episode>()
-<<<<<<< HEAD
             val seasonElements = doc.select(".allseasonss .Block--Item a")
 
             if (seasonElements.isNotEmpty()) {
                 seasonElements.amap { seasonEl ->
                     val seasonUrl = fixUrl(seasonEl.attr("href"))
                     val seasonName = seasonEl.select("h3").text()
-                    
-                    // Extraction du numéro de saison (chiffre ou mot clé en arabe)
+
+                    // Extraction du numéro de saison pour le menu déroulant
                     val seasonNum = seasonName.filter { it.isDigit() }.toIntOrNull()
                         ?: when {
                             seasonName.contains("الاول") || seasonName.contains("الأول") -> 1
@@ -156,12 +155,6 @@ class TukTukHd : MainAPI() {
                             seasonName.contains("العاشر") -> 10
                             else -> 1
                         }
-=======
-            doc.select(".episodes--list--side a").forEach { ep ->
-                val epHref = fixUrl(ep.attr("href"))
-                val epNum = ep.selectFirst("em")?.text()?.filter { it.isDigit() }?.toIntOrNull()
-                val epTitle = ep.attr("title")
->>>>>>> 54a8eea6d146303a8c59508494c3e0dbadadcfd6
 
                     val seasonDoc = app.get(seasonUrl).document
                     val seasonPoster = seasonDoc.selectFirst(".MainSingle .left .image img")?.attr("src") ?: poster
@@ -175,7 +168,7 @@ class TukTukHd : MainAPI() {
                             newEpisode(epHref) {
                                 this.name = epTitle
                                 this.episode = epNum
-                                this.season = seasonNum // <--- Assigne le numéro pour le menu déroulant
+                                this.season = seasonNum
                                 this.posterUrl = seasonPoster
                             }
                         )
@@ -191,7 +184,7 @@ class TukTukHd : MainAPI() {
                         newEpisode(epHref) {
                             this.name = epTitle
                             this.episode = epNum
-                            this.season = 1 // <--- Saison 1 par défaut s'il n'y a pas d'autres saisons
+                            this.season = 1
                             this.posterUrl = poster
                         }
                     )
@@ -341,12 +334,11 @@ class TukTukHd : MainAPI() {
 
             matches.forEach { match ->
                 val link = match.value
-                val isM3u8 = link.contains(".m3u8") || link.contains(".txt")
 
                 callback.invoke(
                     newExtractorLink(
                         source = "TukTukVIP",
-                        name = displayName, // هنا نضع الاسم الجديد المدمج بالجودة
+                        name = displayName,
                         url = link,
                     ) {
                         this.referer = refererUrl
@@ -487,7 +479,7 @@ class TukTukHd : MainAPI() {
                             callback.invoke(
                                 newExtractorLink(
                                     source = "Share VIP",
-                                    name = displayName, // هنا نضع الاسم الجديد المدمج بالجودة لـ rpmshare
+                                    name = displayName,
                                     url = finalM3u8 ?: masterM3u8,
                                 ) {
                                     referer = "https://$domain/"
