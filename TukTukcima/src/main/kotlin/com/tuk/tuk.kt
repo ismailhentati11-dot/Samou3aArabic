@@ -139,8 +139,6 @@ class TukTukHd : MainAPI() {
                 seasonElements.amap { seasonEl ->
                     val seasonUrl = fixUrl(seasonEl.attr("href"))
                     val seasonName = seasonEl.select("h3").text()
-
-                    // Extraction du numéro de saison pour le menu déroulant
                     val seasonNum = seasonName.filter { it.isDigit() }.toIntOrNull()
                         ?: when {
                             seasonName.contains("الاول") || seasonName.contains("الأول") -> 1
