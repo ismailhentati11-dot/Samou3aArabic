@@ -133,6 +133,7 @@ class TukTukHd : MainAPI() {
 
 	if (isSeries) {
             val episodesList = ArrayList<Episode>()
+<<<<<<< HEAD
             val seasonElements = doc.select(".allseasonss .Block--Item a")
 
             if (seasonElements.isNotEmpty()) {
@@ -155,6 +156,12 @@ class TukTukHd : MainAPI() {
                             seasonName.contains("العاشر") -> 10
                             else -> 1
                         }
+=======
+            doc.select(".episodes--list--side a").forEach { ep ->
+                val epHref = fixUrl(ep.attr("href"))
+                val epNum = ep.selectFirst("em")?.text()?.filter { it.isDigit() }?.toIntOrNull()
+                val epTitle = ep.attr("title")
+>>>>>>> 54a8eea6d146303a8c59508494c3e0dbadadcfd6
 
                     val seasonDoc = app.get(seasonUrl).document
                     val seasonPoster = seasonDoc.selectFirst(".MainSingle .left .image img")?.attr("src") ?: poster
