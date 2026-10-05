@@ -115,7 +115,7 @@ class TukTukHd : MainAPI() {
         }
 
         return grouped.values.toList()
-    }
+    }	
 
     override suspend fun load(url: String): LoadResponse {
         val doc = app.get(url).document
@@ -134,7 +134,18 @@ class TukTukHd : MainAPI() {
         if (isSeries) {
             val episodesList = ArrayList<Episode>()
 
-            // on lit directement la liste des episodes presente sur la page (fiable, pas de 404)
+            // on detecte le numero de saison depuis le titre de la page
+            val seasonNum = when {
+                fullTitle.contains("الموسم الاول") || fullTitle.contains("الموسم الأول") -> 1
+                fullTitle.contains("الموسم الثاني") -> 2
+                fullTitle.contains("الموسم الثالث") -> 3
+                fullTitle.contains("الموسم الرابع") -> 4
+                fullTitle.contains("الموسم الخامس") -> 5
+                fullTitle.contains("الموسم السادس") -> 6
+                else -> 1
+            }
+
+            // on lit directement la liste des episodes presente sur la page (fiable)
             doc.select(".episodes--list--side a").forEach { ep ->
                 val epHref = fixUrl(ep.attr("href"))
                 val epNum = ep.selectFirst("em")?.text()?.filter { it.isDigit() }?.toIntOrNull()
@@ -144,7 +155,8 @@ class TukTukHd : MainAPI() {
                     newEpisode(epHref) {
                         this.name = epTitle
                         this.episode = epNum
-                        this.season = 1
+                        this.season = seasonNum
+                        this.posterUrl = poster
                     }
                 )
             }
