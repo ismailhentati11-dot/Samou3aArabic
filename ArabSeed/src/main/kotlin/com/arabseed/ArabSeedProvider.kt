@@ -9,8 +9,6 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.net.URLEncoder
-
-// un serveur de lecture : son nom (ex: "Vidsharing") et son lien
 class ArabSeedServer(val name: String, val url: String)
 
 class ArabSeed : MainAPI() {
@@ -19,8 +17,6 @@ class ArabSeed : MainAPI() {
     override var name = "ArabSeed"
     override val hasMainPage = true
     override val supportedTypes = setOf(TvType.TvSeries, TvType.Movie)
-
-    // categories du menu du site
     override val mainPage = mainPageOf(
         "$mainUrl/category/films/" to "الأفلام",
         "$mainUrl/category/tv/" to "المسلسلات",
@@ -32,10 +28,6 @@ class ArabSeed : MainAPI() {
         "$mainUrl/category/tv/asian-series/" to "مسلسلات آسيوية",
         "$mainUrl/category/anime/" to "أنمي"
     )
-
-    // ---------- OUTILS ----------
-
-    // enleve les mots inutiles du titre (ex: "مشاهدة", "مترجمة", "الحلقة 5")
     private fun cleanTitle(raw: String): String {
         var t = raw.trim()
         t = t.replace(Regex("""\s*الحلقة\s*\d+.*"""), "")
@@ -44,8 +36,6 @@ class ArabSeed : MainAPI() {
         t = t.replace(" مترجم", "")
         return t.trim()
     }
-
-    // lit le numero de saison dans un texte (ex: "الموسم الثالث" -> 3, "الموسم 2" -> 2)
     private fun seasonFromText(text: String): Int {
         val digits = Regex("""الموسم\s*(\d+)""").find(text)
         if (digits != null) {
@@ -67,8 +57,6 @@ class ArabSeed : MainAPI() {
         if (after.contains("العاشر")) return 10
         return 1
     }
-
-    // transforme une carte du site en resultat de recherche
     private fun Element.toSearchResponse(): SearchResponse? {
         val href = fixUrl(this.attr("href").trim())
         if (href.isEmpty()) {
@@ -83,8 +71,6 @@ class ArabSeed : MainAPI() {
         if (title.isEmpty()) {
             return null
         }
-
-        // image de la carte (src ou data-src selon la page)
         var poster: String? = null
         val img = this.selectFirst("img")
         if (img != null) {
@@ -93,8 +79,6 @@ class ArabSeed : MainAPI() {
                 poster = img.attr("src")
             }
         }
-
-        // si le titre contient "فيلم" c'est un film, sinon une serie
         if (rawTitle.contains("فيلم")) {
             return newMovieSearchResponse(title, href, TvType.Movie) {
                 this.posterUrl = poster
@@ -105,8 +89,6 @@ class ArabSeed : MainAPI() {
             }
         }
     }
-
-    // ---------- ACCUEIL ----------
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         var url = request.data
@@ -121,11 +103,8 @@ class ArabSeed : MainAPI() {
                 list.add(item)
             }
         }
-        // une serie apparait une fois par episode : on garde un seul resultat par nom
         return newHomePageResponse(request.name, list.distinctBy { it.name })
     }
-
-    // ---------- RECHERCHE ----------
 
     override suspend fun search(query: String): List<SearchResponse> {
         val encoded = URLEncoder.encode(query, "UTF-8")
@@ -139,8 +118,6 @@ class ArabSeed : MainAPI() {
         }
         return list.distinctBy { it.name }
     }
-
-    // ---------- LES EPISODES D'UNE PAGE ----------
 
     private suspend fun addEpisodes(doc: Document, season: Int, list: ArrayList<Episode>) {
         val links = doc.select("ul.episodes__list li a")
@@ -157,38 +134,26 @@ class ArabSeed : MainAPI() {
         }
     }
 
-    // ---------- DETAILS ----------
-
     override suspend fun load(url: String): LoadResponse {
         val doc = app.get(url).document
-
-        // titre
         var rawTitle = doc.select("h1.post__name").text()
         if (rawTitle.isEmpty()) {
             rawTitle = doc.select("title").text().split(" | ")[0]
         }
         val title = cleanTitle(rawTitle)
-
-        // image
         var poster = doc.select(".poster__single img").attr("src")
         if (poster.isEmpty()) {
             poster = doc.select("meta[property=og:image]").attr("content")
         }
-
-        // resume
         var plot = doc.select(".post__story p").text().trim()
         if (plot.isEmpty()) {
             plot = doc.select("p.post__content").text().trim()
         }
-
-        // annee
         var year: Int? = null
         val yearTag = doc.selectFirst("a[href*=release-year]")
         if (yearTag != null) {
             year = yearTag.text().trim().toIntOrNull()
         }
-
-        // note (ex: "7.2 / 10" -> 7)
         var rating: Int? = null
         val rateText = doc.select(".rate__txt").text()
         val rateMatch = Regex("""\d+(\.\d+)?""").find(rateText)
@@ -198,14 +163,10 @@ class ArabSeed : MainAPI() {
                 rating = (d + 0.5).toInt()
             }
         }
-
-        // genres
         val tags = ArrayList<String>()
         for (g in doc.select("ul.tags__list a[href*=/genre/]")) {
             tags.add(g.text().trim())
         }
-
-        // acteurs
         val actors = ArrayList<ActorData>()
         for (p in doc.select(".persons__list li a")) {
             val actorName = p.select(".name").text().trim()
@@ -213,8 +174,6 @@ class ArabSeed : MainAPI() {
                 actors.add(ActorData(actor = Actor(actorName)))
             }
         }
-
-        // une page avec une liste d'episodes = une serie
         val hasEpisodes = doc.select("ul.episodes__list li a").isNotEmpty()
         val isMovie = rawTitle.contains("فيلم") || !hasEpisodes
 
@@ -229,16 +188,12 @@ class ArabSeed : MainAPI() {
             }
         } else {
             val episodes = ArrayList<Episode>()
-
-            // saison de la page actuelle
             var currentSeason = seasonFromText(rawTitle)
             val selected = doc.selectFirst("#seasons__list ul li.selected")
             if (selected != null) {
                 currentSeason = seasonFromText(selected.text())
             }
             addEpisodes(doc, currentSeason, episodes)
-
-            // autres saisons du menu
             for (item in doc.select("#seasons__list ul li")) {
                 if (item.hasClass("selected")) {
                     continue
@@ -253,7 +208,6 @@ class ArabSeed : MainAPI() {
                     val seasonDoc = app.get(seasonUrl).document
                     addEpisodes(seasonDoc, seasonNumber, episodes)
                 } catch (e: Exception) {
-                    // si une saison ne charge pas, on passe a la suivante
                 }
             }
 
@@ -269,10 +223,6 @@ class ArabSeed : MainAPI() {
             }
         }
     }
-
-    // ---------- LIENS VIDEO : OUTILS ----------
-
-    // nettoie un lien : renvoie "" s'il est inutile (youtube, imdb, vide...)
     private fun cleanLink(raw: String): String {
         val url = raw.trim()
         if (url.isEmpty()) {
@@ -290,8 +240,6 @@ class ArabSeed : MainAPI() {
         }
         return full
     }
-
-    // ajoute un serveur a la liste (sans doublon)
     private fun addServer(name: String, raw: String, list: ArrayList<ArabSeedServer>) {
         val url = cleanLink(raw)
         if (url.isEmpty()) {
@@ -304,14 +252,10 @@ class ArabSeed : MainAPI() {
         }
         list.add(ArabSeedServer(name, url))
     }
-
-    // cherche tous les serveurs de lecture dans une page
     private fun collectServers(doc: Document, list: ArrayList<ArabSeedServer>) {
-        // les serveurs avec leur nom : <li data-link="..."><span>Vidsharing</span></li>
         for (li in doc.select("li[data-link]")) {
             addServer(li.select("span").text().trim(), li.attr("data-link"), list)
         }
-        // les lecteurs integres (iframe)
         for (frame in doc.select("iframe")) {
             var src = frame.attr("src")
             if (src.isEmpty()) {
@@ -319,7 +263,6 @@ class ArabSeed : MainAPI() {
             }
             addServer("", src, list)
         }
-        // autres attributs possibles
         val attributes = listOf("data-url", "data-embed")
         for (attr in attributes) {
             for (el in doc.select("[$attr]")) {
@@ -327,10 +270,6 @@ class ArabSeed : MainAPI() {
             }
         }
     }
-
-    // ---------- LIENS VIDEO : DECODEUR DU CODE CACHE (govid.live) ----------
-
-    // decode un bloc "eval(function(h,u,n,t,e,r){...}("donnees",u,"n",t,e,r))"
     private fun hunterDecode(h: String, n: String, t: Int, e: Int): String {
         val chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+/"
         val digits = chars.substring(0, e)
@@ -338,18 +277,15 @@ class ArabSeed : MainAPI() {
         val out = StringBuilder()
         var i = 0
         while (i < h.length) {
-            // on lit un morceau jusqu'au caractere separateur
             val piece = StringBuilder()
             while (i < h.length && h[i] != delimiter) {
                 piece.append(h[i])
                 i++
             }
             var part = piece.toString()
-            // chaque lettre de n est remplacee par son numero
             for (j in n.indices) {
                 part = part.replace(n[j].toString(), j.toString())
             }
-            // on convertit le nombre ecrit en base e
             var value = 0L
             var power = 1L
             for (k in part.length - 1 downTo 0) {
@@ -362,12 +298,9 @@ class ArabSeed : MainAPI() {
             out.append((value - t).toInt().toChar())
             i++
         }
-        // le texte est en UTF-8 lu comme du latin1 : on le remet en UTF-8
         val bytes = out.toString().toByteArray(Charsets.ISO_8859_1)
         return String(bytes, Charsets.UTF_8)
     }
-
-    // decode tous les blocs caches d'une page et renvoie le texte obtenu
     private fun decodeAllBlocks(html: String): String {
         val result = StringBuilder()
         val blockRegex = Regex("""\}\("([^"]+)",\s*(\d+),\s*"([^"]+)",\s*(\d+),\s*(\d+),\s*(\d+)\)\)""")
@@ -382,13 +315,10 @@ class ArabSeed : MainAPI() {
                     result.append("\n")
                 }
             } catch (ex: Exception) {
-                // bloc illisible : on passe au suivant
             }
         }
         return result.toString()
     }
-
-    // ouvre un serveur govid.live en 2 etapes et sort les liens video
     private suspend fun resolveGovid(
         server: ArabSeedServer,
         referer: String,
@@ -396,29 +326,23 @@ class ArabSeed : MainAPI() {
     ): Boolean {
         var found = false
         try {
-            // etape 1 : la page /play/ contient le lien du vrai lecteur (/e/...)
             val playHtml = app.get(server.url, referer = referer).text
             val playerMatch = Regex("""https?://govid\.live/e/[^"'\s<>\\]+""").find(playHtml)
             if (playerMatch == null) {
                 return false
             }
             val playerUrl = playerMatch.value.replace("&amp;", "&")
-
-            // etape 2 : le lecteur cache ses liens dans un bloc code
             val playerHtml = app.get(playerUrl, referer = "https://govid.live/").text
             var allText = playerHtml + "\n" + decodeAllBlocks(playerHtml)
             allText = allText.replace("\\/", "/")
 
             val videoLinks = ArrayList<String>()
-
-            // liens complets (.m3u8 ou .mp4)
             val absoluteRegex = Regex("""https?://[^"'\s<>\\]+\.(?:m3u8|mp4)[^"'\s<>\\]*""")
             for (m in absoluteRegex.findAll(allText)) {
                 if (!videoLinks.contains(m.value)) {
                     videoLinks.add(m.value)
                 }
             }
-            // liens relatifs (ex: "/stream/.../master.m3u8")
             val relativeRegex = Regex("""["'](/[^"'\s<>\\]+\.(?:m3u8|mp4)[^"'\s<>\\]*)["']""")
             for (m in relativeRegex.findAll(allText)) {
                 val full = "https://govid.live" + m.groupValues[1]
@@ -447,12 +371,9 @@ class ArabSeed : MainAPI() {
                 found = true
             }
         } catch (e: Exception) {
-            // ce serveur ne repond pas : on passe au suivant
         }
         return found
     }
-
-    // ---------- LIENS VIDEO ----------
 
     override suspend fun loadLinks(
         data: String,
@@ -460,7 +381,6 @@ class ArabSeed : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // la page de lecture = adresse de la page + /watch/
         var watchUrl = data
         if (!watchUrl.endsWith("/watch/")) {
             watchUrl = watchUrl.trimEnd('/') + "/watch/"
@@ -469,8 +389,6 @@ class ArabSeed : MainAPI() {
         val watchDoc = app.get(watchUrl, referer = data).document
         val servers = ArrayList<ArabSeedServer>()
         collectServers(watchDoc, servers)
-
-        // si rien trouve : on essaie la page "embeds" du site (numero de l'article)
         if (servers.isEmpty()) {
             var postId = watchDoc.select("#like__post").attr("data-id")
             if (postId.isEmpty()) {
@@ -485,7 +403,6 @@ class ArabSeed : MainAPI() {
                     val embedDoc = app.get("$mainUrl/embeds/?id=$postId", referer = watchUrl).document
                     collectServers(embedDoc, servers)
                 } catch (e: Exception) {
-                    // pas de page embeds
                 }
             }
         }
@@ -495,7 +412,6 @@ class ArabSeed : MainAPI() {
 
         for (server in servers) {
             if (server.url.contains("govid.live")) {
-                // serveurs govid.live : on les ouvre nous-memes
                 val ok = resolveGovid(server, watchUrl, callback)
                 if (ok) {
                     found = true
@@ -503,7 +419,6 @@ class ArabSeed : MainAPI() {
                     loadExtractor(server.url, "$mainUrl/", subtitleCallback, callback)
                 }
             } else if (server.url.contains(siteHost)) {
-                // lien vers une page du site : on l'ouvre pour y trouver le vrai lecteur
                 try {
                     val innerDoc = app.get(server.url, referer = watchUrl).document
                     val inner = ArrayList<ArabSeedServer>()
@@ -520,16 +435,12 @@ class ArabSeed : MainAPI() {
                         }
                     }
                 } catch (e: Exception) {
-                    // on passe au lien suivant
                 }
             } else {
-                // hebergeur externe : CloudStream cherche le bon extracteur
                 loadExtractor(server.url, "$mainUrl/", subtitleCallback, callback)
                 found = true
             }
         }
-
-        // fichiers video directs dans la page de lecture
         for (source in watchDoc.select("source[src]")) {
             val videoUrl = source.attr("abs:src").trim()
             if (videoUrl.isNotEmpty()) {
