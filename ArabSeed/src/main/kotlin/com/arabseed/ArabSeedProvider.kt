@@ -10,6 +10,9 @@ import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.net.URLEncoder
 
+// un serveur de lecture : son nom (ex: "Vidsharing") et son lien
+class ArabSeedServer(val name: String, val url: String)
+
 class ArabSeed : MainAPI() {
     override var lang = "ar"
     override var mainUrl = "https://arabseeds.watch"
@@ -267,45 +270,189 @@ class ArabSeed : MainAPI() {
         }
     }
 
-    // ---------- LIENS VIDEO ----------
+    // ---------- LIENS VIDEO : OUTILS ----------
 
-    // ajoute un lien a la liste s'il est utile (on ignore youtube, imdb, liens vides)
-    private fun addCandidate(raw: String, list: ArrayList<String>) {
+    // nettoie un lien : renvoie "" s'il est inutile (youtube, imdb, vide...)
+    private fun cleanLink(raw: String): String {
         val url = raw.trim()
         if (url.isEmpty()) {
-            return
+            return ""
         }
         if (url.contains("youtube") || url.contains("imdb.com")) {
-            return
+            return ""
         }
         var full = url
         if (url.startsWith("//")) {
             full = "https:" + url
         }
         if (!full.startsWith("http")) {
-            return
+            return ""
         }
-        if (!list.contains(full)) {
-            list.add(full)
-        }
+        return full
     }
 
-    // cherche tous les liens de lecteurs dans une page
-    private fun collectLinks(doc: Document, list: ArrayList<String>) {
+    // ajoute un serveur a la liste (sans doublon)
+    private fun addServer(name: String, raw: String, list: ArrayList<ArabSeedServer>) {
+        val url = cleanLink(raw)
+        if (url.isEmpty()) {
+            return
+        }
+        for (s in list) {
+            if (s.url == url) {
+                return
+            }
+        }
+        list.add(ArabSeedServer(name, url))
+    }
+
+    // cherche tous les serveurs de lecture dans une page
+    private fun collectServers(doc: Document, list: ArrayList<ArabSeedServer>) {
+        // les serveurs avec leur nom : <li data-link="..."><span>Vidsharing</span></li>
+        for (li in doc.select("li[data-link]")) {
+            addServer(li.select("span").text().trim(), li.attr("data-link"), list)
+        }
+        // les lecteurs integres (iframe)
         for (frame in doc.select("iframe")) {
             var src = frame.attr("src")
             if (src.isEmpty()) {
                 src = frame.attr("data-src")
             }
-            addCandidate(src, list)
+            addServer("", src, list)
         }
-        val attributes = listOf("data-link", "data-url", "data-embed")
+        // autres attributs possibles
+        val attributes = listOf("data-url", "data-embed")
         for (attr in attributes) {
             for (el in doc.select("[$attr]")) {
-                addCandidate(el.attr(attr), list)
+                addServer("", el.attr(attr), list)
             }
         }
     }
+
+    // ---------- LIENS VIDEO : DECODEUR DU CODE CACHE (govid.live) ----------
+
+    // decode un bloc "eval(function(h,u,n,t,e,r){...}("donnees",u,"n",t,e,r))"
+    private fun hunterDecode(h: String, n: String, t: Int, e: Int): String {
+        val chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+/"
+        val digits = chars.substring(0, e)
+        val delimiter = n[e]
+        val out = StringBuilder()
+        var i = 0
+        while (i < h.length) {
+            // on lit un morceau jusqu'au caractere separateur
+            val piece = StringBuilder()
+            while (i < h.length && h[i] != delimiter) {
+                piece.append(h[i])
+                i++
+            }
+            var part = piece.toString()
+            // chaque lettre de n est remplacee par son numero
+            for (j in n.indices) {
+                part = part.replace(n[j].toString(), j.toString())
+            }
+            // on convertit le nombre ecrit en base e
+            var value = 0L
+            var power = 1L
+            for (k in part.length - 1 downTo 0) {
+                val d = digits.indexOf(part[k])
+                if (d != -1) {
+                    value += d * power
+                }
+                power *= e
+            }
+            out.append((value - t).toInt().toChar())
+            i++
+        }
+        // le texte est en UTF-8 lu comme du latin1 : on le remet en UTF-8
+        val bytes = out.toString().toByteArray(Charsets.ISO_8859_1)
+        return String(bytes, Charsets.UTF_8)
+    }
+
+    // decode tous les blocs caches d'une page et renvoie le texte obtenu
+    private fun decodeAllBlocks(html: String): String {
+        val result = StringBuilder()
+        val blockRegex = Regex("""\}\("([^"]+)",\s*(\d+),\s*"([^"]+)",\s*(\d+),\s*(\d+),\s*(\d+)\)\)""")
+        for (m in blockRegex.findAll(html)) {
+            try {
+                val h = m.groupValues[1]
+                val n = m.groupValues[3]
+                val t = m.groupValues[4].toInt()
+                val e = m.groupValues[5].toInt()
+                if (e < n.length) {
+                    result.append(hunterDecode(h, n, t, e))
+                    result.append("\n")
+                }
+            } catch (ex: Exception) {
+                // bloc illisible : on passe au suivant
+            }
+        }
+        return result.toString()
+    }
+
+    // ouvre un serveur govid.live en 2 etapes et sort les liens video
+    private suspend fun resolveGovid(
+        server: ArabSeedServer,
+        referer: String,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        var found = false
+        try {
+            // etape 1 : la page /play/ contient le lien du vrai lecteur (/e/...)
+            val playHtml = app.get(server.url, referer = referer).text
+            val playerMatch = Regex("""https?://govid\.live/e/[^"'\s<>\\]+""").find(playHtml)
+            if (playerMatch == null) {
+                return false
+            }
+            val playerUrl = playerMatch.value.replace("&amp;", "&")
+
+            // etape 2 : le lecteur cache ses liens dans un bloc code
+            val playerHtml = app.get(playerUrl, referer = "https://govid.live/").text
+            var allText = playerHtml + "\n" + decodeAllBlocks(playerHtml)
+            allText = allText.replace("\\/", "/")
+
+            val videoLinks = ArrayList<String>()
+
+            // liens complets (.m3u8 ou .mp4)
+            val absoluteRegex = Regex("""https?://[^"'\s<>\\]+\.(?:m3u8|mp4)[^"'\s<>\\]*""")
+            for (m in absoluteRegex.findAll(allText)) {
+                if (!videoLinks.contains(m.value)) {
+                    videoLinks.add(m.value)
+                }
+            }
+            // liens relatifs (ex: "/stream/.../master.m3u8")
+            val relativeRegex = Regex("""["'](/[^"'\s<>\\]+\.(?:m3u8|mp4)[^"'\s<>\\]*)["']""")
+            for (m in relativeRegex.findAll(allText)) {
+                val full = "https://govid.live" + m.groupValues[1]
+                if (!videoLinks.contains(full)) {
+                    videoLinks.add(full)
+                }
+            }
+
+            var label = this.name
+            if (server.name.isNotEmpty()) {
+                label = this.name + " " + server.name
+            }
+
+            for (video in videoLinks) {
+                callback.invoke(
+                    newExtractorLink(this.name, label, video) {
+                        this.referer = "https://govid.live/"
+                        this.quality = Qualities.Unknown.value
+                        if (video.contains(".m3u8")) {
+                            this.type = ExtractorLinkType.M3U8
+                        } else {
+                            this.type = ExtractorLinkType.VIDEO
+                        }
+                    }
+                )
+                found = true
+            }
+        } catch (e: Exception) {
+            // ce serveur ne repond pas : on passe au suivant
+        }
+        return found
+    }
+
+    // ---------- LIENS VIDEO ----------
 
     override suspend fun loadLinks(
         data: String,
@@ -320,11 +467,11 @@ class ArabSeed : MainAPI() {
         }
 
         val watchDoc = app.get(watchUrl, referer = data).document
-        val candidates = ArrayList<String>()
-        collectLinks(watchDoc, candidates)
+        val servers = ArrayList<ArabSeedServer>()
+        collectServers(watchDoc, servers)
 
         // si rien trouve : on essaie la page "embeds" du site (numero de l'article)
-        if (candidates.isEmpty()) {
+        if (servers.isEmpty()) {
             var postId = watchDoc.select("#like__post").attr("data-id")
             if (postId.isEmpty()) {
                 try {
@@ -336,7 +483,7 @@ class ArabSeed : MainAPI() {
             if (postId.isNotEmpty()) {
                 try {
                     val embedDoc = app.get("$mainUrl/embeds/?id=$postId", referer = watchUrl).document
-                    collectLinks(embedDoc, candidates)
+                    collectServers(embedDoc, servers)
                 } catch (e: Exception) {
                     // pas de page embeds
                 }
@@ -346,27 +493,29 @@ class ArabSeed : MainAPI() {
         var found = false
         val siteHost = mainUrl.substringAfter("//")
 
-        for (link in candidates) {
-            if (link.contains(siteHost)) {
+        for (server in servers) {
+            if (server.url.contains("govid.live")) {
+                // serveurs govid.live : on les ouvre nous-memes
+                val ok = resolveGovid(server, watchUrl, callback)
+                if (ok) {
+                    found = true
+                } else {
+                    loadExtractor(server.url, "$mainUrl/", subtitleCallback, callback)
+                }
+            } else if (server.url.contains(siteHost)) {
                 // lien vers une page du site : on l'ouvre pour y trouver le vrai lecteur
                 try {
-                    val innerDoc = app.get(link, referer = watchUrl).document
-                    val inner = ArrayList<String>()
-                    collectLinks(innerDoc, inner)
-                    for (innerLink in inner) {
-                        loadExtractor(innerLink, "$mainUrl/", subtitleCallback, callback)
-                        found = true
-                    }
-                    for (source in innerDoc.select("source[src]")) {
-                        val videoUrl = source.attr("abs:src").trim()
-                        if (videoUrl.isNotEmpty()) {
-                            callback.invoke(
-                                newExtractorLink(this.name, this.name, videoUrl) {
-                                    this.referer = "$mainUrl/"
-                                    this.quality = Qualities.Unknown.value
-                                    this.type = ExtractorLinkType.VIDEO
-                                }
-                            )
+                    val innerDoc = app.get(server.url, referer = watchUrl).document
+                    val inner = ArrayList<ArabSeedServer>()
+                    collectServers(innerDoc, inner)
+                    for (innerServer in inner) {
+                        if (innerServer.url.contains("govid.live")) {
+                            val ok = resolveGovid(innerServer, watchUrl, callback)
+                            if (ok) {
+                                found = true
+                            }
+                        } else {
+                            loadExtractor(innerServer.url, "$mainUrl/", subtitleCallback, callback)
                             found = true
                         }
                     }
@@ -375,7 +524,7 @@ class ArabSeed : MainAPI() {
                 }
             } else {
                 // hebergeur externe : CloudStream cherche le bon extracteur
-                loadExtractor(link, "$mainUrl/", subtitleCallback, callback)
+                loadExtractor(server.url, "$mainUrl/", subtitleCallback, callback)
                 found = true
             }
         }
